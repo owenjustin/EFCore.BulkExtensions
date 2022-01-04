@@ -8,48 +8,83 @@ namespace EFCore.BulkExtensions
 {
     internal static class DbContextBulkTransaction
     {
-        public static void Execute<T>(DbContext context, IList<T> entities, OperationType operationType, BulkConfig bulkConfig, Action<decimal> progress) where T : class
+        public static void Execute<T>(DbContext context, Type type, IList<T> entities, OperationType operationType, BulkConfig bulkConfig, Action<decimal> progress) where T : class
         {
-            if (entities.Count == 0)
+            if (entities.Count == 0 && operationType != OperationType.InsertOrUpdateOrDelete && operationType != OperationType.Truncate && operationType != OperationType.SaveChanges)
             {
                 return;
             }
-            TableInfo tableInfo = TableInfo.CreateInstance(context, entities, operationType, bulkConfig);
 
-            if (operationType == OperationType.Insert && !tableInfo.BulkConfig.SetOutputIdentity)
+            if (operationType == OperationType.SaveChanges)
             {
-                SqlBulkOperation.Insert(context, entities, tableInfo, progress);
+                DbContextBulkTransactionSaveChanges.SaveChanges(context, bulkConfig, progress);
+                return;
             }
-            else if (operationType == OperationType.Read)
+            else if (bulkConfig?.IncludeGraph == true)
             {
-                SqlBulkOperation.Read(context, entities, tableInfo, progress);
+                DbContextBulkTransactionGraphUtil.ExecuteWithGraph(context, entities, operationType, bulkConfig, progress);
             }
             else
             {
-                SqlBulkOperation.Merge(context, entities, tableInfo, operationType, progress);
+                TableInfo tableInfo = TableInfo.CreateInstance(context, type, entities, operationType, bulkConfig);
+
+                if (operationType == OperationType.Insert && !tableInfo.BulkConfig.SetOutputIdentity)
+                {
+                    SqlBulkOperation.Insert(context, type, entities, tableInfo, progress);
+                }
+                else if (operationType == OperationType.Read)
+                {
+                    SqlBulkOperation.Read(context, type, entities, tableInfo, progress);
+                }
+                else if (operationType == OperationType.Truncate)
+                {
+                    SqlBulkOperation.Truncate(context, tableInfo);
+                }
+                else
+                {
+                    SqlBulkOperation.Merge(context, type, entities, tableInfo, operationType, progress);
+                }
             }
         }
+    
 
-        public static Task ExecuteAsync<T>(DbContext context, IList<T> entities, OperationType operationType, BulkConfig bulkConfig, Action<decimal> progress, CancellationToken cancellationToken) where T : class
+        public static async Task ExecuteAsync<T>(DbContext context, Type type, IList<T> entities, OperationType operationType, BulkConfig bulkConfig, Action<decimal> progress, CancellationToken cancellationToken = default) where T : class
         {
-            if (entities.Count == 0)
+            if (entities.Count == 0 && operationType != OperationType.InsertOrUpdateOrDelete && operationType != OperationType.Truncate && operationType != OperationType.SaveChanges)
             {
-                return Task.CompletedTask;
+                return;
             }
-            TableInfo tableInfo = TableInfo.CreateInstance(context, entities, operationType, bulkConfig);
 
-            if (operationType == OperationType.Insert && !tableInfo.BulkConfig.SetOutputIdentity)
+            if (operationType == OperationType.SaveChanges)
             {
-                return SqlBulkOperation.InsertAsync(context, entities, tableInfo, progress, cancellationToken);
+                await DbContextBulkTransactionSaveChanges.SaveChangesAsync(context, bulkConfig, progress, cancellationToken);
             }
-            else if (operationType == OperationType.Read)
+            else if (bulkConfig?.IncludeGraph == true)
             {
-                return SqlBulkOperation.ReadAsync(context, entities, tableInfo, progress, cancellationToken);
+                await DbContextBulkTransactionGraphUtil.ExecuteWithGraphAsync(context, entities, operationType, bulkConfig, progress, cancellationToken);
             }
             else
             {
-                return SqlBulkOperation.MergeAsync(context, entities, tableInfo, operationType, progress, cancellationToken);
+                TableInfo tableInfo = TableInfo.CreateInstance(context, type, entities, operationType, bulkConfig);
+
+                if (operationType == OperationType.Insert && !tableInfo.BulkConfig.SetOutputIdentity)
+                {
+                    await SqlBulkOperation.InsertAsync(context, type, entities, tableInfo, progress, cancellationToken);
+                }
+                else if (operationType == OperationType.Read)
+                {
+                    await SqlBulkOperation.ReadAsync(context, type, entities, tableInfo, progress, cancellationToken);
+                }
+                else if (operationType == OperationType.Truncate)
+                {
+                    await SqlBulkOperation.TruncateAsync(context, tableInfo, cancellationToken);
+                }
+                else
+                {
+                    await SqlBulkOperation.MergeAsync(context, type, entities, tableInfo, operationType, progress, cancellationToken);
+                }
             }
         }
     }
 }
+
