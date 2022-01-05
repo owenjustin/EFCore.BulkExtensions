@@ -112,16 +112,16 @@ namespace EFCore.BulkExtensions
                     $"USING {sourceTable} AS S " +
                     $"ON {GetANDSeparatedColumns(primaryKeys, "T", "S", tableInfo.UpdateByPropertiesAreNullable)}";
 
-            if (operationType == OperationType.Insert || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateDelete)
+            if (operationType == OperationType.Insert || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateOrDelete)
             {
                 q += $" WHEN NOT MATCHED BY TARGET THEN INSERT ({GetCommaSeparatedColumns(insertColumnsNames)})" +
                      $" VALUES ({GetCommaSeparatedColumns(insertColumnsNames, "S")})";
             }
-            if ((operationType == OperationType.Update || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateDelete) & nonIdentityColumnsNames.Count() > 0)
+            if ((operationType == OperationType.Update || operationType == OperationType.InsertOrUpdate || operationType == OperationType.InsertOrUpdateOrDelete) & nonIdentityColumnsNames.Count() > 0)
             {
                 q += $" WHEN MATCHED THEN UPDATE SET {GetCommaSeparatedColumns(nonIdentityColumnsNames, "T", "S")}";
             }
-            if (operationType == OperationType.InsertOrUpdateDelete)
+            if (operationType == OperationType.InsertOrUpdateOrDelete)
             {
                 q += $" WHEN NOT MATCHED BY SOURCE THEN DELETE";
             }

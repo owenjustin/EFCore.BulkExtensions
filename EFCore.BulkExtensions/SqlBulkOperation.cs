@@ -26,10 +26,12 @@ namespace EFCore.BulkExtensions
     {
         Insert,
         InsertOrUpdate,
-        InsertOrUpdateDelete,
+        InsertOrUpdateOrDelete,
         Update,
         Delete,
-        Read
+        Read,
+        SaveChanges,
+        Truncate
     }
 
     public class SqlProviderNotSupportedException : NotSupportedException
@@ -692,7 +694,7 @@ namespace EFCore.BulkExtensions
             {
                 command.CommandText = SqlQueryBuilderSqlite.InsertIntoTable(tableInfo, OperationType.InsertOrUpdate);
             }
-            else if (operationType == OperationType.InsertOrUpdateDelete)
+            else if (operationType == OperationType.InsertOrUpdateOrDelete)
             {
                 throw new NotSupportedException("Sqlite supports only UPSERT(analog for MERGE WHEN MATCHED) but does not have functionality to do: 'WHEN NOT MATCHED BY SOURCE THEN DELETE'" +
                                                 "What can be done is to read all Data, find rows that are not is input List, then with those do the BulkDelete.");

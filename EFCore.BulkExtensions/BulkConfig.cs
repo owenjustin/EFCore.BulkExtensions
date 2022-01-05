@@ -11,6 +11,7 @@ namespace EFCore.BulkExtensions
         public bool PreserveInsertOrder { get; set; }
 
         public bool SetOutputIdentity { get; set; }
+        public bool IncludeGraph { get; set; }
 
         public int BatchSize { get; set; } = 2000;
 
@@ -46,6 +47,7 @@ namespace EFCore.BulkExtensions
         public Func<DbTransaction, DbTransaction> UnderlyingTransaction { get; set; }
 
         internal OperationType OperationType { get; set; }
+        public bool OnSaveChangesSetFK { get; set; }
     }
 
     public class StatsInfo
